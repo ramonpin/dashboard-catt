@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #0d1117; color: #e6edf3;
+    font-family: system-ui, sans-serif; overflow: hidden; }
+  main { height: 100%; display: grid; gap: 2vmin; padding: 2vmin;
+    grid-template-columns: repeat(2, 1fr); grid-template-rows: auto; grid-auto-rows: 1fr; }
+  header { grid-column: 1 / -1; display: flex; justify-content: space-between;
+    align-items: baseline; font-size: 4vmin; }
+  #clock { font-size: 7vmin; font-weight: 600; }
+  [hidden] { display: none !important; }
+  .card { background: #161b22; border-radius: 2vmin; padding: 2.5vmin;
+    display: flex; flex-direction: column; justify-content: center; }
+  .card h2 { margin: 0 0 1vmin; font-size: 3vmin; color: #8b949e; font-weight: 500; }
+  .big { font-size: 11vmin; font-weight: 700; line-height: 1; }
+  .w-main { display: flex; align-items: center; gap: 3vmin; }
+  .icon { font-size: 18vmin; line-height: 1; }
+  #w-table { flex: 1; align-self: stretch; border-collapse: collapse; font-size: 3.2vmin; }
+  #w-table th { text-align: left; font-weight: 500; color: #8b949e; white-space: nowrap; }
+  #w-table td { text-align: right; font-weight: 600; white-space: nowrap; }
+  #w-table th, #w-table td { padding: 0 1vmin; border-bottom: 1px solid #30363d; }
+  #w-table tr:last-child th, #w-table tr:last-child td { border-bottom: 0; }
+  .detail-icon { font-size: 4.5vmin; vertical-align: middle; }
+  .sub { font-size: 3vmin; color: #8b949e; margin-top: 1vmin; }
+  .bar { height: 2vmin; background: #30363d; border-radius: 1vmin; margin-top: 2vmin; overflow: hidden; }
+  .bar > div { height: 100%; width: 0; background: #2ea043; transition: width .5s, background .5s; }
+  #status { font-size: 2.5vmin; color: #f85149; }
+  #status.ok { color: #2ea043; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <span>Madrid <span id="status">●</span></span>
+    <span id="clock">--:--:--</span>
+  </header>
+  <section class="card" id="card-cpu"><h2>CPU</h2><div class="big" id="cpu">--</div>
+    <div class="bar"><div id="cpu-bar"></div></div><div class="sub" id="cores"></div></section>
+  <section class="card" id="card-mem"><h2>Memoria</h2><div class="big" id="mem">--</div>
+    <div class="bar"><div id="mem-bar"></div></div><div class="sub" id="mem-detail"></div></section>
+  <section class="card" id="card-temp"><h2>Temperatura CPU</h2><div class="big" id="temp">--</div>
+    <div class="bar"><div id="temp-bar"></div></div></section>
+  <section class="card" id="card-weather"><h2>Tiempo en Madrid</h2>
+    <div class="w-main">
+      <span class="icon" id="w-icon"></span><span class="big" id="w-temp">--</span>
+      <table id="w-table">
+        <tr><th><span class="detail-icon">🌡️</span> Sensación</th><td id="w-feels">--</td></tr>
+        <tr><th><span class="detail-icon">⬇️</span> Mínima</th><td id="w-min">--</td></tr>
+        <tr><th><span class="detail-icon">⬆️</span> Máxima</th><td id="w-max">--</td></tr>
+        <tr><th><span class="detail-icon">💧</span> Humedad</th><td id="w-hum">--</td></tr>
+        <tr><th><span class="detail-icon">💨</span> Viento</th><td id="w-wind">--</td></tr>
+      </table>
+    </div>
+    <div class="sub" id="w-desc"></div></section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const WMO = {0:["☀️","Despejado"],1:["🌤️","Mayormente despejado"],2:["⛅","Parcialmente nublado"],3:["☁️","Nublado"],
+  45:["🌫️","Niebla"],48:["🌫️","Niebla con escarcha"],51:["🌦️","Llovizna ligera"],53:["🌦️","Llovizna"],55:["🌧️","Llovizna intensa"],
+  61:["🌧️","Lluvia ligera"],63:["🌧️","Lluvia"],65:["🌧️","Lluvia fuerte"],71:["🌨️","Nieve ligera"],73:["🌨️","Nieve"],75:["❄️","Nieve fuerte"],
+  80:["🌦️","Chubascos"],81:["🌧️","Chubascos"],82:["⛈️","Chubascos fuertes"],95:["⛈️","Tormenta"],96:["⛈️","Tormenta con granizo"],99:["⛈️","Tormenta con granizo"]};
+const gib = b => (b / 2**30).toFixed(1) + " GiB";
+const color = p => p < 60 ? "#2ea043" : p < 85 ? "#d29922" : "#f85149";
+function bar(id, p) { const e = $(id); e.style.width = Math.min(p, 100) + "%"; e.style.background = color(p); }
+
+setInterval(() => {
+  $("clock").textContent = new Date().toLocaleTimeString("es-ES", {timeZone: "Europe/Madrid"});
+}, 1000);
+
+const fmtT = (c, u) => (u === "F" ? c * 9 / 5 + 32 : c).toFixed(0) + "°" + u;
+
+function render(d) {
+  const u = d.settings.units;
+  for (const [k, v] of Object.entries(d.settings.cards)) $("card-" + k).hidden = !v;
+  $("cpu").textContent = d.cpu.toFixed(0) + "%"; bar("cpu-bar", d.cpu);
+  $("cores").textContent = d.cpu_per_core.length + " núcleos · máx " + Math.max(...d.cpu_per_core).toFixed(0) + "%";
+  $("mem").textContent = d.mem_percent.toFixed(0) + "%"; bar("mem-bar", d.mem_percent);
+  $("mem-detail").textContent = gib(d.mem_used) + " / " + gib(d.mem_total);
+  if (d.temp == null) { $("temp").textContent = "n/d"; }
+  else { $("temp").textContent = fmtT(d.temp, u); bar("temp-bar", d.temp); }
+  const w = d.weather;
+  if (w) {
+    $("w-temp").textContent = fmtT(w.temp, u);
+    const [icon, desc] = WMO[w.code] ?? ["❔", "Código " + w.code];
+    $("w-icon").textContent = icon;
+    $("w-desc").textContent = desc;
+    $("w-feels").textContent = fmtT(w.feels, u);
+    $("w-min").textContent = fmtT(w.min, u);
+    $("w-max").textContent = fmtT(w.max, u);
+    $("w-hum").textContent = w.humidity + "%";
+    $("w-wind").textContent = w.wind.toFixed(0) + " km/h";
+  }
+}
+
+function connect() {
+  const ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws");
+  ws.onopen = () => $("status").classList.add("ok");
+  ws.onmessage = e => render(JSON.parse(e.data));
+  ws.onclose = () => { $("status").classList.remove("ok"); setTimeout(connect, 2000); };
+}
+connect();
+</script>
+</body>
+</html>

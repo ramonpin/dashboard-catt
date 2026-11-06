@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Administración</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 20px; background: #0d1117; color: #e6edf3;
+    font-family: system-ui, sans-serif; max-width: 480px; margin-inline: auto; }
+  h1 { font-size: 1.4rem; }
+  fieldset { border: 1px solid #30363d; border-radius: 12px; margin: 0 0 16px; padding: 14px; }
+  legend { color: #8b949e; padding: 0 6px; }
+  label { display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 0; font-size: 1.1rem; }
+  input[type=checkbox] { width: 26px; height: 26px; }
+  input[type=range] { flex: 1; margin: 0 12px; }
+  select { font-size: 1.1rem; padding: 8px; background: #161b22; color: inherit;
+    border: 1px solid #30363d; border-radius: 8px; }
+  #msg { height: 1.4em; color: #2ea043; text-align: center; }
+  #msg.err { color: #f85149; }
+</style>
+</head>
+<body>
+<h1>Ajustes del dashboard</h1>
+<form id="f">
+  <fieldset>
+    <legend>Actualización</legend>
+    <label>Intervalo <input type="range" id="interval" min="1" max="60" step="1">
+      <span id="interval-v"></span></label>
+  </fieldset>
+  <fieldset>
+    <legend>Unidades de temperatura</legend>
+    <label>Unidad <select id="units"><option value="C">Celsius (°C)</option>
+      <option value="F">Fahrenheit (°F)</option></select></label>
+  </fieldset>
+  <fieldset>
+    <legend>Tarjetas visibles</legend>
+    <label>CPU <input type="checkbox" id="cpu"></label>
+    <label>Memoria <input type="checkbox" id="mem"></label>
+    <label>Temperatura CPU <input type="checkbox" id="temp"></label>
+    <label>Tiempo en Madrid <input type="checkbox" id="weather"></label>
+  </fieldset>
+</form>
+<div id="msg"></div>
+<script>
+const $ = id => document.getElementById(id);
+const CARDS = ["cpu", "mem", "temp", "weather"];
+
+function fill(s) {
+  $("interval").value = s.interval; $("interval-v").textContent = s.interval + " s";
+  $("units").value = s.units;
+  for (const k of CARDS) $(k).checked = s.cards[k];
+}
+
+async function save() {
+  const body = {
+    interval: Number($("interval").value), units: $("units").value,
+    cards: Object.fromEntries(CARDS.map(k => [k, $(k).checked])),
+  };
+  $("interval-v").textContent = body.interval + " s";
+  try {
+    const r = await fetch("/api/settings", {method: "PUT",
+      headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+    if (!r.ok) throw new Error(r.status);
+    $("msg").className = ""; $("msg").textContent = "Guardado ✓";
+  } catch (e) {
+    $("msg").className = "err"; $("msg").textContent = "Error al guardar";
+  }
+}
+
+$("f").addEventListener("change", save);
+$("interval").addEventListener("input", () => $("interval-v").textContent = $("interval").value + " s");
+fetch("/api/settings").then(r => r.json()).then(fill);
+</script>
+</body>
+</html>
