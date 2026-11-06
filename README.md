@@ -32,6 +32,7 @@ el dispositivo (`catt stop`). Si el envío falla, reintenta 5 veces cada 15 s.
 
 - `-d`, `--device`: nombre o IP del dispositivo, en lugar del predeterminado.
 - `--no-cast`: solo servidor, sin castear.
+- Se puede apagar de forma limpia desde `/admin` (botón "Apagar servidor").
 - Puedes listar dispositivos con `catt scan` y fijar el predeterminado con
   `catt set_default "Salón"`.
 

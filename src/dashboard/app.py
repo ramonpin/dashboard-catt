@@ -2,6 +2,8 @@
 
 import asyncio
 import contextlib
+import os
+import signal
 import time
 from collections.abc import AsyncGenerator
 from pathlib import Path
@@ -145,6 +147,15 @@ async def put_settings(new: Settings) -> Settings:
     for event in _changed:
         event.set()
     return settings
+
+
+@app.post("/api/shutdown", include_in_schema=False)
+async def shutdown() -> dict[str, str]:
+    """Apagado limpio: uvicorn ejecuta el cierre (incluido `catt stop`) al recibir SIGINT."""
+    asyncio.get_running_loop().call_later(
+        0.5, os.kill, os.getpid(), signal.SIGINT
+    )  # deja tiempo a enviar la respuesta
+    return {"status": "shutting down"}
 
 
 @app.websocket("/ws")

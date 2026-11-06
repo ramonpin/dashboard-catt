@@ -18,6 +18,9 @@
   input[type=range] { flex: 1; margin: 0 12px; }
   select { font-size: 1.1rem; padding: 8px; background: #161b22; color: inherit;
     border: 1px solid #30363d; border-radius: 8px; }
+  button { width: 100%; font-size: 1.1rem; padding: 14px; border: 0; border-radius: 10px;
+    background: #da3633; color: #fff; }
+  button:disabled { opacity: .5; }
   #msg { height: 1.4em; color: #2ea043; text-align: center; }
   #msg.err { color: #f85149; }
 </style>
@@ -43,6 +46,10 @@
     <label>Tiempo en Madrid <input type="checkbox" id="weather"></label>
   </fieldset>
 </form>
+<fieldset>
+  <legend>Servidor</legend>
+  <button type="button" id="shutdown">Apagar servidor</button>
+</fieldset>
 <div id="msg"></div>
 <script>
 const $ = id => document.getElementById(id);
@@ -69,6 +76,18 @@ async function save() {
     $("msg").className = "err"; $("msg").textContent = "Error al guardar";
   }
 }
+
+$("shutdown").addEventListener("click", async () => {
+  if (!confirm("¿Apagar el servidor? El dashboard dejará de funcionar.")) return;
+  $("shutdown").disabled = true;
+  try {
+    await fetch("/api/shutdown", {method: "POST"});
+    $("msg").className = ""; $("msg").textContent = "Servidor apagándose…";
+  } catch (e) {
+    $("shutdown").disabled = false;
+    $("msg").className = "err"; $("msg").textContent = "Error al apagar";
+  }
+});
 
 $("f").addEventListener("change", save);
 $("interval").addEventListener("input", () => $("interval-v").textContent = $("interval").value + " s");
