@@ -13,6 +13,8 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
+from dashboard.cast import cast_when_ready, config_from_env, stop_cast
+
 STATIC = Path(__file__).parent / "static"
 WEATHER_TTL = 600.0  # segundos entre consultas al tiempo
 
@@ -105,9 +107,16 @@ async def weather_loop() -> None:
 @contextlib.asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None]:
     psutil.cpu_percent(interval=None)  # primera llamada de calibración
-    task = asyncio.create_task(weather_loop())
+    weather = asyncio.create_task(weather_loop())
+    do_cast, port, device = config_from_env()
+    cast = asyncio.create_task(cast_when_ready(port, device)) if do_cast else None
     yield
-    task.cancel()
+    weather.cancel()
+    if cast is not None:
+        if cast.done() and not cast.cancelled() and cast.result():
+            await stop_cast(device)  # desconecta el dispositivo remoto
+        else:
+            cast.cancel()
 
 
 app = FastAPI(title="dashboard-catt", lifespan=lifespan)

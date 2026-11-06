@@ -12,10 +12,6 @@ fmt:
     uv run ruff format
     uv run ruff check --fix
 
-# Arranca el servidor web (puerto 8000)
-run:
-    uv run python -m dashboard serve
-
-# Castea a pantalla completa: just cast "Salón"
-cast device="":
-    uv run python -m dashboard cast {{ if device != "" { "-d " + device } else { "" } }}
+# Arranca el servidor y castea al dispositivo por defecto de catt
+run *args:
+    uv run python -m dashboard {{args}}

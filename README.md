@@ -20,26 +20,24 @@ uv sync
 
 ## Uso
 
-Arrancar el servidor (puerto 8000, accesible desde la red):
-
 ```sh
 just run
-# o: uv run python -m dashboard serve [--host 0.0.0.0] [--port 8000]
+# o: uv run python -m dashboard [--port 8000] [-d "Salón"] [--no-cast]
 ```
 
-Abrir <http://localhost:8000/> en el navegador.
+El programa es autocontenido: arranca el servidor (puerto 8000, accesible desde
+la red) y, una vez listo, envía el dashboard a pantalla completa al dispositivo
+**por defecto de `catt`** con `catt cast_site`. Al cerrar el servidor desconecta
+el dispositivo (`catt stop`). Si el envío falla, reintenta 5 veces cada 15 s.
 
-Castear a pantalla completa:
+- `-d`, `--device`: nombre o IP del dispositivo, en lugar del predeterminado.
+- `--no-cast`: solo servidor, sin castear.
+- Puedes listar dispositivos con `catt scan` y fijar el predeterminado con
+  `catt set_default "Salón"`.
 
-```sh
-just cast "Salón"
-# o: uv run python -m dashboard cast [-d "Salón"] [--port 8000]
-```
-
-Sin dispositivo se usa el predeterminado de `catt`. Puedes listar los
-disponibles con `catt scan`. El comando `cast` usa la IP local de la máquina
-para que el dispositivo pueda llegar al servidor, por lo que el servidor debe
-estar en marcha y el puerto no debe estar bloqueado por el firewall.
+La IP local de la máquina se usa para que el dispositivo llegue al servidor, por
+lo que el puerto no debe estar bloqueado por el firewall. También puedes abrir
+<http://localhost:8000/> en un navegador.
 
 ## Cómo funciona
 
@@ -61,14 +59,14 @@ estar en marcha y el puerto no debe estar bloqueado por el firewall.
 | `just lint`      | `ruff check`                  |
 | `just typecheck` | `ty check`                    |
 | `just fmt`       | Formatea y corrige con `ruff` |
-| `just run`       | Arranca el servidor           |
-| `just cast`      | Castea el dashboard           |
+| `just run`       | Arranca servidor y castea     |
 
 ## Estructura
 
 ```
 src/dashboard/
-├── __main__.py      # CLI: serve / cast
+├── __main__.py      # CLI
+├── cast.py          # Envío automático con catt
 ├── app.py           # FastAPI + WebSocket + métricas
 └── static/index.html
 ```
