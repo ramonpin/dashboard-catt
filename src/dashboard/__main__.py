@@ -1,4 +1,4 @@
-"""Arranca el servidor del dashboard y lo envía al dispositivo `catt`."""
+"""Start the dashboard server and cast it to the `catt` device."""
 
 import argparse
 import os

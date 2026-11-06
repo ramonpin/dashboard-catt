@@ -1,4 +1,4 @@
-"""Servidor del dashboard: métricas del sistema y tiempo en Madrid por WebSocket."""
+"""Dashboard server: system metrics and Madrid weather over WebSocket."""
 
 import asyncio
 import contextlib
@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 from dashboard.cast import cast_when_ready, config_from_env, stop_cast
 
 STATIC = Path(__file__).parent / "static"
-WEATHER_TTL = 600.0  # segundos entre consultas al tiempo
+WEATHER_TTL = 600.0  # seconds between weather requests
 
 WEATHER_URL = (
     "https://api.open-meteo.com/v1/forecast"
@@ -38,20 +38,20 @@ class Cards(BaseModel):
 
 
 class Settings(BaseModel):
-    """Ajustes de visualización modificables desde la página de administración."""
+    """Display settings that can be changed from the admin page."""
 
-    interval: float = Field(default=2.0, ge=1, le=60)  # segundos entre envíos
+    interval: float = Field(default=2.0, ge=1, le=60)  # seconds between updates
     units: Literal["C", "F"] = "C"
     cards: Cards = Cards()
 
 
 settings = Settings()
-_changed: set[asyncio.Event] = set()  # una por conexión; despierta al cambiar ajustes
+_changed: set[asyncio.Event] = set()  # one per connection; wakes it when settings change
 _weather: dict[str, Any] | None = None
 
 
 def cpu_temperature() -> float | None:
-    """Devuelve la temperatura de CPU en °C, si hay sensores disponibles."""
+    """Return the CPU temperature in °C, if sensors are available."""
     try:
         sensors = psutil.sensors_temperatures()
     except AttributeError:
@@ -79,7 +79,7 @@ def system_metrics() -> dict[str, Any]:
 
 
 async def refresh_weather() -> None:
-    """Consulta el tiempo en Madrid (Open-Meteo); conserva el último valor si falla."""
+    """Fetch the weather in Madrid (Open-Meteo); keep the last value on failure."""
     global _weather
     try:
         async with httpx.AsyncClient(timeout=10) as client:
@@ -100,7 +100,7 @@ async def refresh_weather() -> None:
 
 
 async def weather_loop() -> None:
-    """Actualiza el tiempo cada WEATHER_TTL segundos, con independencia de los clientes."""
+    """Refresh the weather every WEATHER_TTL seconds, regardless of clients."""
     while True:
         await refresh_weather()
         await asyncio.sleep(WEATHER_TTL)
@@ -108,7 +108,7 @@ async def weather_loop() -> None:
 
 @contextlib.asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None]:
-    psutil.cpu_percent(interval=None)  # primera llamada de calibración
+    psutil.cpu_percent(interval=None)  # first call, for calibration
     weather = asyncio.create_task(weather_loop())
     do_cast, port, device = config_from_env()
     cast = asyncio.create_task(cast_when_ready(port, device)) if do_cast else None
@@ -116,7 +116,7 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None]:
     weather.cancel()
     if cast is not None:
         if cast.done() and not cast.cancelled() and cast.result():
-            await stop_cast(device)  # desconecta el dispositivo remoto
+            await stop_cast(device)  # disconnect the remote device
         else:
             cast.cancel()
 
@@ -131,7 +131,7 @@ async def index() -> FileResponse:
 
 @app.get("/admin", include_in_schema=False)
 async def admin() -> FileResponse:
-    """Página de administración (no enlazada desde el dashboard)."""
+    """Admin page (not linked from the dashboard)."""
     return FileResponse(STATIC / "admin.html")
 
 
@@ -151,10 +151,10 @@ async def put_settings(new: Settings) -> Settings:
 
 @app.post("/api/shutdown", include_in_schema=False)
 async def shutdown() -> dict[str, str]:
-    """Apagado limpio: uvicorn ejecuta el cierre (incluido `catt stop`) al recibir SIGINT."""
+    """Clean shutdown: uvicorn runs its shutdown (including `catt stop`) on SIGINT."""
     asyncio.get_running_loop().call_later(
         0.5, os.kill, os.getpid(), signal.SIGINT
-    )  # deja tiempo a enviar la respuesta
+    )  # leaves time to send the response
     return {"status": "shutting down"}
 
 

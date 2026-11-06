@@ -1,4 +1,4 @@
-"""Envío automático del dashboard a un dispositivo `catt`."""
+"""Automatically cast the dashboard to a `catt` device."""
 
 import asyncio
 import contextlib
@@ -9,12 +9,12 @@ import socket
 log = logging.getLogger("uvicorn.error")
 
 RETRIES = 5
-RETRY_DELAY = 15.0  # segundos entre reintentos
-STOP_TIMEOUT = 20.0  # segundos máximos para `catt stop`
+RETRY_DELAY = 15.0  # seconds between retries
+STOP_TIMEOUT = 20.0  # maximum seconds for `catt stop`
 
 
 def lan_ip() -> str:
-    """IP local accesible desde la red (para que el dispositivo llegue al servidor)."""
+    """Local IP reachable from the network (so the device can reach the server)."""
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
         try:
             s.connect(("8.8.8.8", 80))
@@ -28,7 +28,7 @@ def dashboard_url(port: int) -> str:
 
 
 async def cast_dashboard(port: int, device: str | None = None) -> bool:
-    """Ejecuta `catt cast_site`; sin `device` usa el dispositivo por defecto de catt."""
+    """Run `catt cast_site`; without `device`, use catt's default device."""
     url = dashboard_url(port)
     cmd = ["catt", *(["-d", device] if device else []), "cast_site", url]
     for attempt in range(1, RETRIES + 1):
@@ -56,7 +56,7 @@ async def cast_dashboard(port: int, device: str | None = None) -> bool:
 
 
 async def stop_cast(device: str | None = None) -> bool:
-    """Ejecuta `catt stop` para desconectar el dashboard del dispositivo."""
+    """Run `catt stop` to disconnect the dashboard from the device."""
     cmd = ["catt", *(["-d", device] if device else []), "stop"]
     try:
         proc = await asyncio.create_subprocess_exec(
@@ -74,7 +74,7 @@ async def stop_cast(device: str | None = None) -> bool:
 
 
 async def cast_when_ready(port: int, device: str | None) -> bool:
-    """Espera a que el servidor acepte conexiones y entonces castea."""
+    """Wait for the server to accept connections, then cast."""
     for _ in range(50):
         with contextlib.suppress(OSError):
             _, w = await asyncio.open_connection("127.0.0.1", port)
@@ -85,7 +85,7 @@ async def cast_when_ready(port: int, device: str | None) -> bool:
 
 
 def config_from_env() -> tuple[bool, int, str | None]:
-    """(castear, puerto, dispositivo) según las variables que fija el CLI."""
+    """(cast, port, device) from the variables set by the CLI."""
     return (
         os.environ.get("DASHBOARD_CAST", "1") == "1",
         int(os.environ.get("DASHBOARD_PORT", "8000")),

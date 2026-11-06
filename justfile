@@ -12,6 +12,6 @@ fmt:
     uv run ruff format
     uv run ruff check --fix
 
-# Arranca el servidor y castea al dispositivo por defecto de catt
+# Start the server and cast to catt's default device
 run *args:
     uv run python -m dashboard {{args}}
